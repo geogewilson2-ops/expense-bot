@@ -87,6 +87,26 @@ async def get_last_n(user_id: int, n: int = 10) -> list:
         return list(reversed(rows))
 
 
+async def get_expense_by_id(user_id: int, expense_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        return await cursor.fetchone()
+
+
+async def delete_expense(user_id: int, expense_id: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
 async def get_summary_by_month(
     user_id: int, year: int, month: int
 ) -> tuple[list, list, float]:

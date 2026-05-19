@@ -207,6 +207,52 @@ async def payment_callback(
     return ConversationHandler.END
 
 
+async def delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    rows = await db.get_last_n(user_id, 5)
+    if not rows:
+        await update.message.reply_text("Записей нет.")
+        return
+
+    lines = ["🗑 Последние записи — нажми чтобы удалить:\n"]
+    keyboard_rows = []
+    for i, row in enumerate(rows, 1):
+        date = row["created_at"][5:]  # MM-DD
+        date = date.replace("-", ".")
+        label = f"{i}. {date} — {row['description']} — {r.fmt_amount(row['amount'])} руб."
+        lines.append(label)
+        keyboard_rows.append([
+            InlineKeyboardButton(f"❌ #{i}", callback_data=f"del_{row['id']}")
+        ])
+
+    await update.message.reply_text(
+        "\n".join(lines),
+        reply_markup=InlineKeyboardMarkup(keyboard_rows),
+    )
+
+
+async def delete_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    cq = update.callback_query
+    await cq.answer()
+
+    expense_id = int(cq.data[len("del_"):])
+    user_id = update.effective_user.id
+
+    row = await db.get_expense_by_id(user_id, expense_id)
+    if row is None:
+        await cq.edit_message_text("Запись не найдена (возможно, уже удалена).")
+        return
+
+    deleted = await db.delete_expense(user_id, expense_id)
+    if deleted:
+        await cq.edit_message_text(
+            f"✅ Удалено: {row['description']} — {r.fmt_amount(row['amount'])} руб."
+            f" | {row['category']} | {row['payment']}"
+        )
+    else:
+        await cq.edit_message_text("Не удалось удалить запись.")
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.pop("pending", None)
     await update.message.reply_text("Отменено.")

@@ -17,6 +17,8 @@ from handlers import (
     CHOOSE_PAYMENT,
     cancel,
     category_callback,
+    delete_callback,
+    delete_command,
     handle_message,
     help_command,
     last_command,
@@ -49,8 +51,10 @@ def main() -> None:
     # Standalone commands (work outside any conversation too)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help",  help_command))
-    app.add_handler(CommandHandler("last",  last_command))
-    app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("last",   last_command))
+    app.add_handler(CommandHandler("stats",  stats_command))
+    app.add_handler(CommandHandler("delete", delete_command))
+    app.add_handler(CallbackQueryHandler(delete_callback, pattern=r"^del_\d+$"))
 
     # Expense intake conversation
     conv = ConversationHandler(
